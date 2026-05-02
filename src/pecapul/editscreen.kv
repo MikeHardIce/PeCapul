@@ -43,6 +43,7 @@
                 size_hint_y: .1
                 text: ""
                 font_size: 24
+                color: 0, 0, 0, 1
                 bold: True
 
             ScrollView:
@@ -71,7 +72,9 @@
 
                 GridLayout:
                     id: id_edit_tag_list
-                    size_hint_y: .9
+                    #size_hint_y: .9
+                    size_hint_y: None
+                    height: self.minimum_height
                     cols: 1
                     padding: 10
                     spacing: 10
@@ -88,17 +91,29 @@
                 height: 25
                 on_release: root.cancel_lesson()
 
-<EditTagBox>:
+<TagBox>:
     
     orientation: "horizontal"
     text_tag: id_tag_text
 
-    size_hint_y: None 
-    height: 25
+    btn_delete: id_tag_delete
 
-    Button:
+    size_hint_y: None 
+    height: 35
+
+    TextInput:
         id: id_tag_text
         text: ""
+        multiline: False
+        on_text_validate: root.on_enter_pressed()
+
+    Button:
+        id: id_tag_delete
+        text: "X"
+        size_hint_x: None
+        width: 35
+        color: 1, 0, 0, 1
+        on_release: root.delete_tag()
 
 <EditTermBox>:
     canvas.before:
@@ -141,5 +156,5 @@
     size_hint_y: None
     height: 25
     text: "+"
-    font_size: 50
+    font_size: 32
     bold: True

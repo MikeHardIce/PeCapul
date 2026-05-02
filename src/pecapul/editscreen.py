@@ -3,6 +3,7 @@ from typing import List
 
 from sqlalchemy.orm import Session
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
@@ -27,15 +28,65 @@ class EditTermBox(BoxLayout):
     label_to: Label = ObjectProperty(None)
     text_to: TextInput = ObjectProperty(None)
 
-class EditTagBox(BoxLayout):
+class TagBox(BoxLayout):
     text_tag: TextInput = ObjectProperty(None)
+    btn_delete: Button = ObjectProperty(None)
+    tag_id: int = -1
 
+    def on_pre_enter(self, *args):
+        self.btn_delete.disabled = self.tag_id < 0
+
+    def on_enter_pressed(self):
+        app: PeCapulBaseApp | None = App.get_running_app()
+
+        if app is None or len(self.text_tag.text) < 1:
+            return
+
+        self.text_tag.background_color = (1, 1, 1, 1)
+        tag = Tag()
+        with Session(app.engine) as session:
+            try:
+                tag.name = self.text_tag.text
+                if self.tag_id > -1:
+                    tag.id = self.tag_id
+
+                app.trainer.save_tag(session, tag)
+
+                session.commit()
+
+                if tag.id > -1:
+                    self.tag_id = tag.id
+
+                editLesson: EditLessonScreen = app.manager.get_screen("edit_lesson")
+
+                editLesson.edit_tag_list.add_widget(TagBox())
+            except Exception as e:
+                print(e)
+                session.rollback()
+                self.text_tag.background_color = (1, 0, 0, 1)
+
+    def delete_tag(self):
+        app: PeCapulBaseApp | None = App.get_running_app()
+
+        if app is None or self.tag_id < 0:
+            return
+        
+        with Session(app.engine) as session:
+            try:
+                app.trainer.delete_tag(session, self.tag_id)
+                session.commit()
+
+                editLesson: EditLessonScreen = app.manager.get_screen("edit_lesson")
+
+                editLesson.on_pre_enter()
+            except Exception:
+                session.rollback()
 
 class EditLessonScreen(Screen):
     
-    lesson_id: int
-    edit_lesson_list: BoxLayout = ObjectProperty(None)
-    edit_tag_list: BoxLayout = ObjectProperty(None)
+    lesson_id: int = -1
+    edit_lesson_list: GridLayout = ObjectProperty(None)
+    edit_tag_list: GridLayout = ObjectProperty(None)
     lesson_name: Label = ObjectProperty(None)
 
     app: PeCapulBaseApp | None
@@ -82,8 +133,14 @@ class EditLessonScreen(Screen):
             tags: List[Tag] = self.app.trainer.load_all_tags(session)
 
             for tag in tags:
-                box = EditTagBox()
+                box = TagBox()
                 box.text_tag.text = tag.name
+                box.tag_id = tag.id
+
+                self.edit_tag_list.add_widget(box)
 
         self.edit_lesson_list.add_widget(AddItemBox())
-        self.edit_tag_list.add_widget(AddItemBox())
+        self.edit_tag_list.add_widget(TagBox())
+
+    def add_tag(self):
+        pass
