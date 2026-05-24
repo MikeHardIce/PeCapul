@@ -14,7 +14,7 @@ class Lesson(Base):
     created: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
     modified: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
-    lesson_terms: Mapped[List["LessonTerm"]] = relationship("LessonTerm", back_populates= "lesson")
+    lesson_terms: Mapped[List["LessonTerm"]] = relationship("LessonTerm", back_populates= "lesson", cascade="all, delete-orphan", single_parent=True)
 
     def __repr__(self) -> str:
         return f"id:{self.id} name: {self.name} description: {self.description} created: {self.created} modified: {self.modified} \n" \
@@ -54,8 +54,8 @@ class LessonTerm(Base):
     term1_id: Mapped[int] = mapped_column(Integer, ForeignKey("terms.id"))
     term2_id: Mapped[int] = mapped_column(Integer, ForeignKey("terms.id"))
 
-    term1: Mapped[Term] = relationship("Term", foreign_keys="LessonTerm.term1_id")
-    term2: Mapped[Term] = relationship("Term", foreign_keys="LessonTerm.term2_id")
+    term1: Mapped[Term] = relationship("Term", foreign_keys="LessonTerm.term1_id", cascade="all, delete-orphan", single_parent=True)
+    term2: Mapped[Term] = relationship("Term", foreign_keys="LessonTerm.term2_id", cascade="all, delete-orphan", single_parent=True)
 
     def __repr__(self) -> str:
         return f"id: {self.id} term1: {self.term1.value} ({self.term1.tag.name}) term2: {self.term2.value} ({self.term2.tag.name})"

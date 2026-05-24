@@ -8,12 +8,14 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import Screen
+from kivy.uix.spinner import Spinner
 from kivy.properties import ObjectProperty
 from kivy.app import App
 from kivy.lang import Builder
 
 from pecapul.app import PeCapulBaseApp
-from pecapul.database import Tag, Lesson
+from pecapul.trainer import Trainer
+from pecapul.database import LessonTerm, Tag, Lesson, Term
 
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), 'editscreen.kv'))
@@ -21,12 +23,85 @@ Builder.load_file(os.path.join(os.path.dirname(__file__), 'editscreen.kv'))
 class AddItemBox(Button):
     pass
 
-class EditTermBox(BoxLayout):
-    label_from: Label = ObjectProperty(None)
+class TermBox(BoxLayout):
+    lesson_term_id: int = -1
+    sp_from: Spinner = ObjectProperty(None)
     text_from: TextInput = ObjectProperty(None)
 
-    label_to: Label = ObjectProperty(None)
+    sp_to: Spinner = ObjectProperty(None)
     text_to: TextInput = ObjectProperty(None)
+
+    btn_delete: Button = ObjectProperty(None)
+
+    def on_pre_enter(self, *args):
+        pass
+
+    def on_enter_pressed(self):
+        app: PeCapulBaseApp | None = App.get_running_app()
+
+        if app is None:
+            return
+        
+        if len(self.text_from.text) < 1 or len(self.text_to.text) < 1:
+            self.text_to.focus = len(self.text_to.text) < 1
+            self.text_from.focus = len(self.text_from.text) < 1
+            return
+        
+        editLesson: EditLessonScreen = app.manager.get_screen("edit_lesson")
+        lesson_id = editLesson.lesson_id
+        with Session(app.engine) as session:
+            try:
+                trainer: Trainer = app.trainer
+                lesson: Lesson = trainer.load_lesson_by_id(session, lesson_id)
+                tags: List[Tag] = app.trainer.load_all_tags(session)
+                tag_from = next(filter(lambda x: x.name == self.sp_from.text, tags), None)
+                tag_to = next(filter(lambda x: x.name == self.sp_to.text, tags), None)
+
+                if tag_from is not None and tag_to is not None:
+                    pass
+
+                lesson_term = LessonTerm(term1 = Term(value=self.text_from.text, tag=tag_from), term2 = Term(value = self.text_to.text, tag = tag_to))
+
+                lesson.lesson_terms.append(lesson_term)
+
+                app.trainer.save_lessons(session, [lesson])
+
+                session.commit()
+
+                self.lesson_term_id = lesson_term.id
+
+                editLesson.add_empty_termbox(tags)
+
+            except Exception as ex:
+                print(ex)
+                session.rollback()
+
+    def delete_lesson_term(self):
+        app: PeCapulBaseApp | None = App.get_running_app()
+
+        if app is None:
+            return
+        
+        editLesson: EditLessonScreen = app.manager.get_screen("edit_lesson")
+        lesson_id = editLesson.lesson_id
+        with Session(app.engine) as session:
+            try:
+                trainer: Trainer = app.trainer
+                lesson: Lesson = trainer.load_lesson_by_id(session, lesson_id)
+
+                to_be_deleted = next(filter(lambda x: x.id == self.lesson_term_id, lesson.lesson_terms), None)
+
+                if to_be_deleted is not None:
+                    lesson.lesson_terms.remove(to_be_deleted)
+                    trainer.save_lessons(session, [lesson])
+                
+                session.commit()
+
+                editLesson.edit_lesson_list.remove_widget(self)
+
+            except Exception as ex:
+                print(ex)
+                session.rollback()
 
 class TagBox(BoxLayout):
     text_tag: TextInput = ObjectProperty(None)
@@ -59,7 +134,9 @@ class TagBox(BoxLayout):
 
                 editLesson: EditLessonScreen = app.manager.get_screen("edit_lesson")
 
-                editLesson.edit_tag_list.add_widget(TagBox())
+                ##editLesson.edit_tag_list.add_widget(TagBox())
+
+                editLesson.on_pre_enter()
             except Exception as e:
                 print(e)
                 session.rollback()
@@ -73,13 +150,17 @@ class TagBox(BoxLayout):
         
         with Session(app.engine) as session:
             try:
-                app.trainer.delete_tag(session, self.tag_id)
+                app.trainer.delete_tag_by_id(session, self.tag_id)
                 session.commit()
 
                 editLesson: EditLessonScreen = app.manager.get_screen("edit_lesson")
 
+                ##editLesson.edit_tag_list.remove_widget(self)
+
                 editLesson.on_pre_enter()
-            except Exception:
+
+            except Exception as ex:
+                print(ex)
                 session.rollback()
 
 class EditLessonScreen(Screen):
@@ -91,14 +172,7 @@ class EditLessonScreen(Screen):
 
     app: PeCapulBaseApp | None
 
-    def save_lesson(self):
-
-        if self.app is None:
-            return
-        
-        self.app.manager.current = "main_menu"
-
-    def cancel_lesson(self):
+    def back(self):
         
         if self.app is None:
             return
@@ -117,20 +191,23 @@ class EditLessonScreen(Screen):
 
         with Session(self.app.engine) as session:
             lesson: Lesson = self.app.trainer.load_lesson_by_id(session, self.lesson_id)
-
+            tags: List[Tag] = self.app.trainer.load_all_tags(session)
             self.lesson_name.text = lesson.name
 
             for lesson_term in lesson.lesson_terms:
-                box = EditTermBox()
-                box.label_from.text = lesson_term.term1.tag.name
+                box = TermBox()
+                box.lesson_term_id = lesson_term.id
+                box.sp_from.values = [x.name for x in tags]
+                box.sp_from.text = lesson_term.term1.tag.name
+
                 box.text_from.text = lesson_term.term1.value
 
-                box.label_to.text = lesson_term.term2.tag.name
+                box.sp_to.values = [x.name for x in tags]
+                box.sp_to.text = lesson_term.term2.tag.name
                 box.text_to.text = lesson_term.term2.value
 
                 self.edit_lesson_list.add_widget(box)
 
-            tags: List[Tag] = self.app.trainer.load_all_tags(session)
 
             for tag in tags:
                 box = TagBox()
@@ -139,8 +216,13 @@ class EditLessonScreen(Screen):
 
                 self.edit_tag_list.add_widget(box)
 
-        self.edit_lesson_list.add_widget(AddItemBox())
+            self.add_empty_termbox(tags)
+
         self.edit_tag_list.add_widget(TagBox())
 
-    def add_tag(self):
-        pass
+    def add_empty_termbox (self, tags: List[Tag]):
+        box = TermBox()
+        box.sp_from.values = [x.name for x in tags]
+        box.sp_to.values = [x.name for x in tags]
+
+        self.edit_lesson_list.add_widget(box)

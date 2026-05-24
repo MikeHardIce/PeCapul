@@ -15,42 +15,20 @@ class TrainingSession:
 
 class Trainer:
 
-    # _engine: Engine
-
-    # def __init__(self, engine: Engine):
-    #     self._engine = engine
-
-    # def deleteLessons(self, lessons: List[Lesson]):
-    #     with Session(self._engine) as session:
-    #         for lesson in lessons:
-    #             session.delete(lesson)
-    #         session.commit()
-
-    # def loadLessons(self, paging: Paging = Paging(0, 10)) -> List[Lesson]:
-    #     with Session(self._engine) as session:
-    #         #query = select(Lesson).limit(paging.page_from).offset(paging.page_to)
-            
-    #         return list(session.scalars(select(Lesson)).unique())
-
-    # def saveLessons(self, lessons: List[Lesson]):
-    #     with Session(self._engine) as session:
-    #         session.add_all(lessons)
-    #         session.commit()
-
     def delete_lessons(self, session: Session, lessons: List[Lesson]):
         for lesson in lessons:
             session.delete(lesson)
             
-    def load_all_lessons(self, session: Session, paging: Paging = Paging(0, 10)) -> List[Lesson]:
+    def load_all_lessons(self, session: Session, paging: Paging = Paging(0, 100)) -> List[Lesson]:
         return list(session.scalars(select(Lesson).offset(paging.page_from).limit(paging.page_to - paging.page_from)).all())
     
     def load_lesson_by_id(self, session: Session, id: int) -> Lesson:
         return session.scalar(select(Lesson).where(Lesson.id == id))
 
-    def load_all_terms(self, session: Session, paging: Paging = Paging(0, 10)) -> List[Term]:
+    def load_all_terms(self, session: Session, paging: Paging = Paging(0, 100)) -> List[Term]:
         return list(session.scalars(select(Term).offset(paging.page_from).limit(paging.page_to - paging.page_from)).unique())
 
-    def load_all_tags(self, session: Session, paging: Paging = Paging(0, 10)) -> List[Tag]:
+    def load_all_tags(self, session: Session, paging: Paging = Paging(0, 100)) -> List[Tag]:
         return list(session.scalars(select(Tag).offset(paging.page_from).limit(paging.page_to - paging.page_from)).unique())
 
     def save_lessons(self, session: Session, lessons: List[Lesson]):
@@ -59,7 +37,7 @@ class Trainer:
     def save_tag(self, session: Session, tag: Tag) -> None:
         session.add(tag)
 
-    def delete_tag(self, session: Session, id: int) -> None:
+    def delete_tag_by_id(self, session: Session, id: int) -> None:
         tag = session.scalar(select(Tag).where(Tag.id == id))
         session.delete(tag)
         

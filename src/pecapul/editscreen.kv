@@ -70,9 +70,10 @@
                 bar_width: 10
                 scroll_type: ['bars', 'content']
 
+                size_hint_y: 1
+
                 GridLayout:
                     id: id_edit_tag_list
-                    #size_hint_y: .9
                     size_hint_y: None
                     height: self.minimum_height
                     cols: 1
@@ -80,16 +81,10 @@
                     spacing: 10
 
             Button:
-                text: "Save"
+                text: "Back"
                 size_hint_y: None
                 height: 25
-                on_release: root.save_lesson()
-            
-            Button:
-                text: "Cancel"
-                size_hint_y: None
-                height: 25
-                on_release: root.cancel_lesson()
+                on_release: root.back()
 
 <TagBox>:
     
@@ -115,7 +110,7 @@
         color: 1, 0, 0, 1
         on_release: root.delete_tag()
 
-<EditTermBox>:
+<TermBox>:
     canvas.before:
         Color:
             rgba: .5, .5, 1, 1
@@ -124,33 +119,46 @@
             size: self.size
 
     orientation: "horizontal"
-    label_from: id_lang_from_tag
+    sp_from: id_lang_from_tag
     text_from: id_term_from_text
 
-    label_to: id_lang_to_tag
+    sp_to: id_lang_to_tag
     text_to: id_term_to_text
 
+    btn_delete: id_lesson_term_delete
+
     size_hint_y: None 
-    height: 25
+    height: 35
     
-    Label:
+    Spinner:
         id: id_lang_from_tag
-        text: ""
-        size_hint_x: .1
+        size_hint_x: .2
+
     TextInput:
         id: id_term_from_text
         text: ""
+        multiline: False
         size_hint_x: .4
+        on_text_validate: root.on_enter_pressed()
 
-    Label:
+    Spinner:
         id: id_lang_to_tag
-        text: ""
-        size_hint_x: .1
+        size_hint_x: .2
 
     TextInput:
         id: id_term_to_text
         text: ""
+        multiline: False
         size_hint_x: .4
+        on_text_validate: root.on_enter_pressed()
+
+    Button:
+        id: id_lesson_term_delete
+        text: "X"
+        size_hint_x: None
+        width: 35
+        color: 1, 0, 0, 1
+        on_release: root.delete_lesson_term()
 
 <AddItemBox>:
     size_hint_y: None
